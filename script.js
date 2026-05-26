@@ -430,6 +430,10 @@
     }
   }
 
+  function syncAppVh() {
+    document.documentElement.style.setProperty('--app-vh', window.innerHeight + 'px');
+  }
+
   /* ============================================================
      Map explorer
      ============================================================ */
@@ -1967,7 +1971,12 @@
   function init() {
     PLACES_INDEX = buildPlacesIndex();
     syncHeaderOffset();
-    window.addEventListener('resize', syncHeaderOffset);
+    syncAppVh();
+    window.addEventListener('resize', function () {
+      syncHeaderOffset();
+      syncAppVh();
+    });
+    window.addEventListener('orientationchange', syncAppVh);
     initMobileNav();
     initPlaceSheet();
     initDayJumper();
