@@ -728,6 +728,25 @@
   /* ============================================================
      Day jumper
      ============================================================ */
+  function setActiveDayJump(dayNum) {
+    document.querySelectorAll('.day-jump').forEach(function (btn) {
+      var on = dayNum != null && parseInt(btn.dataset.day, 10) === dayNum;
+      btn.classList.toggle('is-active', on);
+    });
+    var wrap = document.getElementById('day-jumper-buttons');
+    if (wrap && dayNum != null) {
+      var activeBtn = wrap.querySelector('.day-jump.is-active');
+      if (activeBtn) {
+        var wrapRect = wrap.getBoundingClientRect();
+        var btnRect = activeBtn.getBoundingClientRect();
+        if (btnRect.left < wrapRect.left || btnRect.right > wrapRect.right) {
+          var target = activeBtn.offsetLeft - (wrap.clientWidth - activeBtn.offsetWidth) / 2;
+          wrap.scrollTo({ left: target, behavior: 'smooth' });
+        }
+      }
+    }
+  }
+
   function initDayJumper() {
     var wrap = document.getElementById('day-jumper-buttons');
     if (!wrap) return;
@@ -747,6 +766,54 @@
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
       wrap.appendChild(btn);
+    });
+  }
+
+  function initItineraryScrollSpy() {
+    if (typeof IntersectionObserver === 'undefined') return;
+    var cards = document.querySelectorAll('.day-card');
+    if (!cards.length) return;
+
+    function getTopOffset() {
+      var header = document.querySelector('.site-header');
+      var jumper = document.querySelector('.day-jumper');
+      var hH = header ? header.offsetHeight : 60;
+      var jH = jumper ? jumper.offsetHeight : 60;
+      return hH + jH + 8;
+    }
+
+    var visible = new Set();
+
+    function pickActive() {
+      if (!visible.size) return null;
+      return Array.from(visible).sort(function (a, b) { return a - b; })[0];
+    }
+
+    var io;
+    function build() {
+      if (io) io.disconnect();
+      var top = getTopOffset();
+      io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          var dayNum = parseInt(entry.target.id.replace('day-', ''), 10);
+          if (isNaN(dayNum)) return;
+          if (entry.isIntersecting) visible.add(dayNum);
+          else visible.delete(dayNum);
+        });
+        setActiveDayJump(pickActive());
+      }, {
+        rootMargin: '-' + top + 'px 0px -70% 0px',
+        threshold: 0
+      });
+      document.querySelectorAll('.day-card').forEach(function (c) { io.observe(c); });
+    }
+
+    build();
+
+    var resizeT;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeT);
+      resizeT = setTimeout(build, 150);
     });
   }
 
@@ -1425,29 +1492,8 @@
   function renderPickerGrid() {
     var grid = document.getElementById('picker-grid');
     if (!grid) return;
-    var items = filterDirectoryItems(pickerState.filter, pickerState.query);
     grid.innerHTML = '';
-
-    if (!items.length) {
-      grid.innerHTML = '<p class="picker-empty">No saved places match. Search above for any location.</p>';
-      return;
-    }
-
-    items.forEach(function (s) {
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'picker-spot' + (pickerState.spot && pickerState.spot.name === s.name ? ' is-selected' : '');
-      btn.innerHTML =
-        '<span class="picker-spot__name">' + escapeHtml(s.name) + '</span>' +
-        '<span class="picker-spot__meta">' + escapeHtml(s.tags || '') + '</span>';
-      btn.addEventListener('click', function () {
-        pickerState.spot = s;
-        renderPickerGrid();
-        renderPickerDaySlot();
-        updatePickerConfirm();
-      });
-      grid.appendChild(btn);
-    });
+    grid.hidden = true;
   }
 
   function initPickerModal() {
@@ -1930,6 +1976,7 @@
     rebuildItineraryState();
     initEditSheet();
     renderItinerary();
+    initItineraryScrollSpy();
     initPickerModal();
     initPlaceSearch();
     renderDirectory('all', '');
