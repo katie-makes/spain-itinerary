@@ -435,7 +435,7 @@
      ============================================================ */
   var routeMap = null, routeLayer = null, markersLayer = null;
   var mapMarkers = [];
-  var activeMapDay = 5;
+  var activeMapDay = null;
   var activeStopIndex = 0;
 
   function getTravelDays() {
@@ -606,23 +606,32 @@
     [1, 2, 3, 4, 5, 6, 7, 8, 9].forEach(function (d) {
       var tab = document.createElement('button');
       tab.type = 'button';
-      tab.className = 'map-day-tab' + (d === 5 ? ' is-active' : '');
+      tab.className = 'map-day-tab';
       tab.dataset.day = d;
       tab.setAttribute('role', 'tab');
-      tab.setAttribute('aria-selected', d === 5 ? 'true' : 'false');
+      tab.setAttribute('aria-selected', 'false');
       tab.textContent = 'Day ' + d;
       tab.addEventListener('click', function () { setMapDay(d); });
       tabs.appendChild(tab);
     });
   }
 
+  function renderMapPanelEmpty() {
+    var panel = document.getElementById('map-panel');
+    if (!panel) return;
+    panel.innerHTML =
+      '<div class="map-panel__inner">' +
+        '<span class="kicker">The route</span>' +
+        '<h3 class="map-panel__title">Tap a day to see the stops</h3>' +
+        '<p class="map-panel__desc">Nine days along the Catalan coast — each pill above shows that day&rsquo;s stops on the map.</p>' +
+      '</div>';
+  }
+
   function initRouteMap() {
     initMapDayTabs();
+    renderMapPanelEmpty();
 
-    if (typeof L === 'undefined') {
-      renderMapPanel(5);
-      return;
-    }
+    if (typeof L === 'undefined') return;
     var el = document.getElementById('route-map');
     if (!el || el._inited) return;
     el._inited = true;
@@ -637,7 +646,9 @@
     markersLayer = L.layerGroup().addTo(routeMap);
     routeLayer = L.layerGroup().addTo(routeMap);
 
-    setMapDay(5);
+    routeMap.setView([41.85, 2.7], 8);
+    routeMap._initialViewSet = true;
+
     setTimeout(function () { routeMap.invalidateSize(); }, 200);
   }
 
@@ -656,6 +667,16 @@
       mapModalState.originalParent = mapCard.parentElement;
       mapModalState.originalNext = mapCard.nextSibling;
       modalBody.appendChild(mapCard);
+    }
+
+    var titleEl = document.getElementById('map-modal-title');
+    if (titleEl) {
+      var meta = dayNum != null ? getDayMeta(dayNum) : null;
+      if (meta) {
+        titleEl.textContent = 'Day ' + dayNum + ' · ' + (DAY_TITLES[dayNum] || meta.location);
+      } else {
+        titleEl.textContent = 'Trip route';
+      }
     }
 
     modal.hidden = false;
@@ -1024,6 +1045,42 @@
     showSavedToast('Added to Day ' + dayNum);
   }
 
+  function applyCustomAdd(dayNum, title, notes, timeFrame, customTime) {
+    var day = getDayMeta(dayNum);
+    if (!day) return;
+    var cleanTitle = (title || '').trim();
+    if (!cleanTitle) return;
+
+    var newAct = {
+      id: 'add-' + dayNum + '-' + Date.now(),
+      time: timeFromFrame(timeFrame, customTime, null),
+      text: cleanTitle,
+      status: 'confirmed',
+      notes: (notes || '').trim(),
+      isAdded: true
+    };
+
+    var added = loadAddedActivities();
+    added.push({
+      id: newAct.id, day: dayNum,
+      openSlotIndex: null, openSlotId: null, direct: true,
+      activity: JSON.parse(JSON.stringify(newAct))
+    });
+    saveAddedActivities(added);
+
+    var newScore = timeSortScore(newAct.time);
+    var insertAt = day.activities.length;
+    for (var i = 0; i < day.activities.length; i++) {
+      if (timeSortScore(day.activities[i].time) > newScore) {
+        insertAt = i;
+        break;
+      }
+    }
+    day.activities.splice(insertAt, 0, newAct);
+    refreshDayCard(dayNum);
+    showSavedToast('Added to Day ' + dayNum);
+  }
+
   function removeAddedActivity(activityId) {
     var added = loadAddedActivities().filter(function (a) {
       return a.id !== activityId && a.activity.id !== activityId;
@@ -1152,7 +1209,8 @@
     day: null, slotIndex: null, spot: null,
     timeFrame: 'morning', customTime: '',
     filter: 'all', query: '',
-    dayLocked: false
+    dayLocked: false,
+    customTitle: '', customNotes: ''
   };
 
   function openPickerModal(opts) {
@@ -1165,6 +1223,8 @@
     pickerState.filter = 'all';
     pickerState.query = '';
     pickerState.dayLocked = !!opts.dayLocked;
+    pickerState.customTitle = '';
+    pickerState.customNotes = '';
 
     var modal = document.getElementById('picker-modal');
     if (!modal) return;
@@ -1211,6 +1271,18 @@
     document.getElementById('picker-search').value = '';
     document.getElementById('picker-search-results').hidden = true;
 
+    var customSection = document.getElementById('picker-custom-section');
+    var orDivider = document.getElementById('picker-or');
+    var placeLabel = document.getElementById('picker-place-label');
+    var showCustom = pickerState.dayLocked;
+    if (customSection) customSection.hidden = !showCustom;
+    if (orDivider) orDivider.hidden = !showCustom;
+    if (placeLabel) placeLabel.textContent = showCustom ? 'Or choose a place' : 'Choose a place';
+    var titleInput = document.getElementById('picker-custom-title');
+    var notesInput = document.getElementById('picker-custom-notes');
+    if (titleInput) titleInput.value = '';
+    if (notesInput) notesInput.value = '';
+
     renderPickerDaySlot();
     renderPickerFilters();
     renderPickerGrid();
@@ -1234,11 +1306,14 @@
   function updatePickerConfirm() {
     var btn = document.getElementById('picker-confirm');
     if (!btn) return;
-    var hasRequired = pickerState.spot && pickerState.day != null;
+    var hasPlace = !!pickerState.spot && pickerState.day != null;
+    var hasCustom = pickerState.dayLocked
+      && pickerState.day != null
+      && !!(pickerState.customTitle || '').trim();
     if (pickerState.dayLocked) {
-      btn.disabled = !hasRequired;
+      btn.disabled = !(hasPlace || hasCustom);
     } else {
-      btn.disabled = !(hasRequired && pickerState.slotIndex != null);
+      btn.disabled = !(hasPlace && pickerState.slotIndex != null);
     }
   }
 
@@ -1401,17 +1476,37 @@
       });
     }
 
+    var customTitleInput = document.getElementById('picker-custom-title');
+    if (customTitleInput) {
+      customTitleInput.addEventListener('input', function () {
+        pickerState.customTitle = customTitleInput.value;
+        updatePickerConfirm();
+      });
+    }
+    var customNotesInput = document.getElementById('picker-custom-notes');
+    if (customNotesInput) {
+      customNotesInput.addEventListener('input', function () {
+        pickerState.customNotes = customNotesInput.value;
+      });
+    }
+
     document.getElementById('picker-confirm').addEventListener('click', function () {
-      if (!pickerState.spot || pickerState.day == null) return;
-      if (!pickerState.dayLocked && pickerState.slotIndex == null) return;
+      if (pickerState.day == null) return;
       var tf = pickerState.timeFrame;
       if (tf === 'custom') {
         pickerState.customTime = document.getElementById('custom-time').value || '';
       }
-      if (pickerState.slotIndex != null) {
-        applySpotLink(pickerState.day, pickerState.slotIndex, pickerState.spot, tf, pickerState.customTime);
+      var hasCustomTitle = pickerState.dayLocked && !!(pickerState.customTitle || '').trim();
+      if (hasCustomTitle) {
+        applyCustomAdd(pickerState.day, pickerState.customTitle, pickerState.customNotes, tf, pickerState.customTime);
       } else {
-        applyDirectAdd(pickerState.day, pickerState.spot, tf, pickerState.customTime);
+        if (!pickerState.spot) return;
+        if (!pickerState.dayLocked && pickerState.slotIndex == null) return;
+        if (pickerState.slotIndex != null) {
+          applySpotLink(pickerState.day, pickerState.slotIndex, pickerState.spot, tf, pickerState.customTime);
+        } else {
+          applyDirectAdd(pickerState.day, pickerState.spot, tf, pickerState.customTime);
+        }
       }
       var targetDay = pickerState.day;
       closePickerModal();

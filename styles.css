@@ -245,13 +245,9 @@ ol, ul { list-style: none; }
   z-index: 600;
   display: flex;
   gap: 6px;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  scrollbar-width: none;
+  flex-wrap: wrap;
   pointer-events: auto;
 }
-.map-day-tabs::-webkit-scrollbar { display: none; }
 .map-day-tab {
   background: var(--bg);
   border: 1px solid var(--line);
@@ -1238,6 +1234,30 @@ ol, ul { list-style: none; }
   padding: 10px 14px;
 }
 
+/* Custom activity inputs inside picker modal */
+.picker-custom {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.picker-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 4px;
+  color: var(--mute-2);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+}
+.picker-or::before,
+.picker-or::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--line);
+}
+
 .search-field--in-modal {
   margin-bottom: 8px;
 }
@@ -1312,13 +1332,28 @@ ol, ul { list-style: none; }
   flex-direction: column;
   box-shadow: var(--shadow-lg);
 }
+.map-modal__header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+  z-index: 2;
+}
+.map-modal__title {
+  font-family: var(--serif);
+  font-size: 22px;
+  line-height: 1.1;
+  margin: 0;
+  color: var(--ink);
+}
 .map-modal__close {
-  position: absolute;
-  top: 14px;
-  right: 14px;
+  flex: 0 0 auto;
   width: 36px;
   height: 36px;
-  z-index: 1500;
   background: var(--bg);
   border: 1px solid var(--line);
   border-radius: var(--r-pill);
@@ -1339,6 +1374,7 @@ ol, ul { list-style: none; }
   flex: 1;
   min-height: 0;
   display: flex;
+  overflow: hidden;
 }
 .map-modal__body .map-card {
   flex: 1;
@@ -1357,16 +1393,17 @@ ol, ul { list-style: none; }
   .map-modal__body .map-card { flex-direction: column; }
 }
 @media (max-width: 720px) {
-  .map-modal { padding: 0; }
+  .map-modal { padding: 12px; }
   .map-modal__dialog {
-    border-radius: 0;
-    height: 100vh;
-    max-height: 100vh;
+    border-radius: var(--r-lg);
+    height: 100%;
+    max-height: 100%;
   }
-  .map-modal__close {
-    top: 10px;
-    right: 10px;
+  .map-modal__header {
+    padding: 12px 14px;
   }
+  .map-modal__title { font-size: 18px; }
+  .map-modal__close { width: 34px; height: 34px; }
 }
 
 /* ============================================================
@@ -1584,14 +1621,7 @@ ol, ul { list-style: none; }
     border-left: 0;
     border-top: 1px solid var(--line);
   }
-  .map-day-tabs {
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    padding-bottom: 2px;
-    scrollbar-width: none;
-  }
-  .map-day-tabs::-webkit-scrollbar { display: none; }
-  .map-day-tab { font-size: 13px; padding: 7px 14px; }
+  .map-day-tab { font-size: 12px; padding: 6px 12px; }
   .map-panel__title { font-size: 20px; line-height: 28px; }
   .map-panel__inner { padding: 20px; }
 

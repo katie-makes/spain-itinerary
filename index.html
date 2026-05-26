@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Upright:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-  <link rel="stylesheet" href="styles.css?v=20260526a" />
+  <link rel="stylesheet" href="styles.css?v=20260526d" />
 </head>
 <body>
 
@@ -120,7 +120,10 @@
   <div id="map-modal" class="map-modal" hidden aria-hidden="true" role="dialog" aria-label="Day map">
     <div class="map-modal__backdrop" data-map-modal-close></div>
     <div class="map-modal__dialog">
-      <button type="button" class="map-modal__close" data-map-modal-close aria-label="Close map">&times;</button>
+      <header class="map-modal__header">
+        <h2 class="map-modal__title" id="map-modal-title">Trip route</h2>
+        <button type="button" class="map-modal__close" data-map-modal-close aria-label="Close map">&times;</button>
+      </header>
       <div class="map-modal__body" id="map-modal-body"></div>
     </div>
   </div>
@@ -158,8 +161,18 @@
         </div>
       </div>
 
+      <div class="modal__section" id="picker-custom-section" hidden>
+        <h3 class="modal__label">Write it yourself</h3>
+        <div class="picker-custom">
+          <input type="text" id="picker-custom-title" class="form-input" placeholder="Title (e.g. Beach picnic, Massage, Coffee with M.)" autocomplete="off" />
+          <textarea id="picker-custom-notes" class="form-input form-input--textarea" rows="2" placeholder="Notes (optional)"></textarea>
+        </div>
+      </div>
+
+      <div class="picker-or" id="picker-or" hidden><span>or pick from the directory</span></div>
+
       <div class="modal__section">
-        <h3 class="modal__label">Choose a place</h3>
+        <h3 class="modal__label" id="picker-place-label">Choose a place</h3>
         <div class="search-field search-field--in-modal">
           <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/><path d="m13 13-2.5-2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
           <input type="search" id="picker-search" placeholder="Search directory or find a place..." autocomplete="off" />
@@ -216,6 +229,6 @@
   <script src="directory-data.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="script.js?v=20260526a"></script>
+  <script src="script.js?v=20260526d"></script>
 </body>
 </html>
