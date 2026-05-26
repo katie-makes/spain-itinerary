@@ -874,30 +874,53 @@
     assignActivityIds();
   }
 
+  // Returns minutes-from-midnight for any time-ish string.
+  // Examples: "9:00am" -> 540, "2pm" -> 840, "noon" -> 720, "sunset" -> 1170,
+  // "morning"/"am" -> 540, "afternoon"/"pm" -> 840, "evening" -> 1140.
   function timeSortScore(timeStr) {
-    var t = String(timeStr || '').toLowerCase();
-    if (t.indexOf('7') === 0 && t.indexOf('am') >= 0) return 70;
-    if (t === 'am' || t.indexOf('morning') >= 0) return 85;
-    if (t.indexOf('9') === 0 && t.indexOf('am') >= 0) return 90;
-    if (t.indexOf('10') >= 0 && t.indexOf('am') >= 0) return 100;
-    if (t === 'noon') return 120;
-    if (t.indexOf('12') === 0 && t.indexOf('pm') >= 0) return 122;
-    if (t.indexOf('2') >= 0 && t.indexOf('pm') >= 0) return 140;
-    if (t === 'pm' || t.indexOf('afternoon') >= 0) return 150;
-    if (t.indexOf('all day') >= 0) return 130;
-    if (t.indexOf('4') >= 0 && t.indexOf('pm') >= 0) return 165;
-    if (t.indexOf('7') >= 0 && t.indexOf('pm') >= 0) return 190;
-    if (t === 'sunset') return 200;
-    if (t === 'late') return 210;
-    if (t.indexOf('evening') >= 0) return 185;
-    if (t.indexOf('8') >= 0 && t.indexOf('pm') >= 0) return 205;
-    return 160;
+    if (timeStr == null) return 14 * 60;
+    var t = String(timeStr).trim().toLowerCase();
+    if (!t) return 14 * 60;
+
+    if (t === 'morning' || t === 'am') return 9 * 60;       // ~9am
+    if (t === 'afternoon' || t === 'pm') return 14 * 60;    // 2pm
+    if (t === 'evening') return 19 * 60;                    // 7pm
+    if (t === 'noon') return 12 * 60;
+    if (t === 'midnight') return 0;
+    if (t === 'sunset') return 19 * 60 + 30;
+    if (t === 'sunrise') return 6 * 60;
+    if (t === 'late') return 22 * 60;
+    if (t === 'all day' || t === 'allday') return 13 * 60;
+    if (t === 'flex' || t === 'flexible') return 14 * 60;
+
+    var m = t.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/);
+    if (m) {
+      var hour = parseInt(m[1], 10);
+      var min = parseInt(m[2] || '0', 10);
+      var ampm = m[3];
+      if (ampm === 'pm' && hour !== 12) hour += 12;
+      if (ampm === 'am' && hour === 12) hour = 0;
+      if (!ampm && hour < 6) hour += 12; // "3:00" → 3pm by default
+      return hour * 60 + min;
+    }
+    return 14 * 60;
   }
 
+  // Sort key with wrap-around: post-midnight times (0–4:59am) belong to the
+  // previous day's "evening", so push them past 24h for chronological order.
+  function sortKey(timeStr) {
+    var s = timeSortScore(timeStr);
+    if (s < 5 * 60) return s + 24 * 60;
+    return s;
+  }
+
+  // Morning: 5:00am–11:59am  (300–719)
+  // Afternoon: 12:00pm–4:59pm (720–1019)
+  // Evening: 5:00pm–4:59am   (>=1020 OR <300)
   function getTimeBucket(timeStr) {
     var s = timeSortScore(timeStr);
-    if (s < 125) return 'morning';
-    if (s < 178) return 'afternoon';
+    if (s >= 5 * 60 && s < 12 * 60) return 'morning';
+    if (s >= 12 * 60 && s < 17 * 60) return 'afternoon';
     return 'evening';
   }
 
@@ -913,10 +936,10 @@
   }
 
   function findInsertIndex(day, newAct, openSlotIndex) {
-    var newScore = timeSortScore(newAct.time);
+    var newScore = sortKey(newAct.time);
     var insertAt = openSlotIndex;
     for (var i = openSlotIndex - 1; i >= 0; i--) {
-      if (timeSortScore(day.activities[i].time) <= newScore) {
+      if (sortKey(day.activities[i].time) <= newScore) {
         insertAt = i + 1;
         break;
       }
@@ -925,16 +948,57 @@
     return insertAt;
   }
 
+  function sortedInsertIndex(day, time) {
+    var newScore = sortKey(time);
+    for (var i = 0; i < day.activities.length; i++) {
+      if (sortKey(day.activities[i].time) > newScore) return i;
+    }
+    return day.activities.length;
+  }
+
   function applyEditsToItinerary() {
     var edits = loadEdits();
+
+    // 1) Apply text/time/notes edits in place, and collect day-moves.
+    var moves = [];
     ITINERARY.forEach(function (d) {
-      d.activities.forEach(function (a) {
+      d.activities.forEach(function (a, i) {
         var e = edits[a.id];
         if (!e) return;
         if (e.time != null) a.time = e.time;
         if (e.text != null) a.text = e.text;
         if (e.notes != null) a.notes = e.notes;
+        if (e.day != null && e.day !== d.day) {
+          moves.push({ from: d, idx: i, toDay: e.day, act: a });
+        }
       });
+    });
+
+    // 2) Apply day moves. Splice from each source day in descending index
+    //    order so earlier splices don't shift later ones.
+    var bySource = {};
+    moves.forEach(function (m) {
+      var key = String(m.from.day);
+      (bySource[key] = bySource[key] || []).push(m);
+    });
+    Object.keys(bySource).forEach(function (key) {
+      bySource[key].sort(function (a, b) { return b.idx - a.idx; }).forEach(function (m) {
+        m.from.activities.splice(m.idx, 1);
+      });
+    });
+    moves.forEach(function (m) {
+      var toDay = getDayMeta(m.toDay);
+      if (!toDay) return;
+      toDay.activities.splice(sortedInsertIndex(toDay, m.act.time), 0, m.act);
+    });
+
+    // 3) Apply removals (base activities the user explicitly removed).
+    ITINERARY.forEach(function (d) {
+      for (var i = d.activities.length - 1; i >= 0; i--) {
+        var a = d.activities[i];
+        var e = edits[a.id];
+        if (e && e.removed) d.activities.splice(i, 1);
+      }
     });
   }
 
@@ -942,7 +1006,7 @@
     var added = loadAddedActivities();
     added.sort(function (a, b) {
       if (a.day !== b.day) return a.day - b.day;
-      return timeSortScore(a.activity.time) - timeSortScore(b.activity.time);
+      return sortKey(a.activity.time) - sortKey(b.activity.time);
     });
     added.forEach(function (entry) {
       var day = getDayMeta(entry.day);
@@ -952,15 +1016,7 @@
       if (day.activities.some(function (a) { return a.id === act.id; })) return;
 
       if (entry.direct || (entry.openSlotIndex == null && !entry.openSlotId)) {
-        var newScore = timeSortScore(act.time);
-        var insertAt = day.activities.length;
-        for (var i = 0; i < day.activities.length; i++) {
-          if (timeSortScore(day.activities[i].time) > newScore) {
-            insertAt = i;
-            break;
-          }
-        }
-        day.activities.splice(insertAt, 0, act);
+        day.activities.splice(sortedInsertIndex(day, act.time), 0, act);
         return;
       }
 
@@ -969,7 +1025,12 @@
         openIdx = day.activities.findIndex(function (a) { return a.id === entry.openSlotId; });
       }
       if (openIdx < 0) openIdx = entry.openSlotIndex;
-      if (openIdx < 0 || !day.activities[openIdx] || day.activities[openIdx].status !== 'open') return;
+      if (openIdx < 0 || !day.activities[openIdx] || day.activities[openIdx].status !== 'open') {
+        // Slot no longer exists (e.g. user removed it or moved the item) —
+        // fall back to a direct, time-sorted insert so the item still appears.
+        day.activities.splice(sortedInsertIndex(day, act.time), 0, act);
+        return;
+      }
       var slotInsertAt = findInsertIndex(day, act, openIdx);
       day.activities.splice(slotInsertAt, 0, act);
     });
@@ -1103,15 +1164,7 @@
     });
     saveAddedActivities(added);
 
-    var newScore = timeSortScore(newAct.time);
-    var insertAt = day.activities.length;
-    for (var i = 0; i < day.activities.length; i++) {
-      if (timeSortScore(day.activities[i].time) > newScore) {
-        insertAt = i;
-        break;
-      }
-    }
-    day.activities.splice(insertAt, 0, newAct);
+    day.activities.splice(sortedInsertIndex(day, newAct.time), 0, newAct);
     refreshDayCard(dayNum);
     showSavedToast('Added to Day ' + dayNum);
   }
@@ -1139,15 +1192,7 @@
     });
     saveAddedActivities(added);
 
-    var newScore = timeSortScore(newAct.time);
-    var insertAt = day.activities.length;
-    for (var i = 0; i < day.activities.length; i++) {
-      if (timeSortScore(day.activities[i].time) > newScore) {
-        insertAt = i;
-        break;
-      }
-    }
-    day.activities.splice(insertAt, 0, newAct);
+    day.activities.splice(sortedInsertIndex(day, newAct.time), 0, newAct);
     refreshDayCard(dayNum);
     showSavedToast('Added to Day ' + dayNum);
   }
@@ -1175,7 +1220,20 @@
     document.getElementById('edit-time').value = act.time || '';
     document.getElementById('edit-text').value = act.text || '';
     document.getElementById('edit-notes').value = act.notes || '';
-    document.getElementById('edit-delete').hidden = !act.isAdded;
+
+    // Populate the Day selector with all travel days. Default to the
+    // activity's current day.
+    var daySelect = document.getElementById('edit-day');
+    if (daySelect) {
+      daySelect.innerHTML = '';
+      getTravelDays().forEach(function (d2) {
+        var opt = document.createElement('option');
+        opt.value = String(d2.day);
+        opt.textContent = 'Day ' + d2.day + ' — ' + getDayDateLabel(d2) + ' · ' + d2.location;
+        if (d2.day === dayNum) opt.selected = true;
+        daySelect.appendChild(opt);
+      });
+    }
 
     var place = act.status === 'confirmed' ? resolvePlace(act) : null;
     var viewPlace = document.getElementById('edit-view-place');
@@ -1206,46 +1264,70 @@
 
   function saveEditSheet() {
     if (!editState.activityId) return;
-    var patch = {
-      time: document.getElementById('edit-time').value.trim(),
-      text: document.getElementById('edit-text').value.trim(),
-      notes: document.getElementById('edit-notes').value.trim()
-    };
-    var edits = loadEdits();
-    edits[editState.activityId] = patch;
-    saveEdits(edits);
+    var time = document.getElementById('edit-time').value.trim();
+    var text = document.getElementById('edit-text').value.trim();
+    var notes = document.getElementById('edit-notes').value.trim();
+    var daySelect = document.getElementById('edit-day');
+    var newDay = daySelect ? parseInt(daySelect.value, 10) : NaN;
+    if (isNaN(newDay)) newDay = editState.day;
 
     var added = loadAddedActivities();
     var addEntry = added.find(function (a) {
       return a.id === editState.activityId || (a.activity && a.activity.id === editState.activityId);
     });
+
     if (addEntry) {
-      addEntry.activity.time = patch.time;
-      addEntry.activity.text = patch.text;
-      addEntry.activity.notes = patch.notes;
-      saveAddedActivities(added);
-      rebuildItineraryState();
-      renderItinerary();
-    } else {
-      var day = getDayMeta(editState.day);
-      var act = day && day.activities[editState.index];
-      if (act) {
-        act.time = patch.time;
-        act.text = patch.text;
-        act.notes = patch.notes;
+      // Added activity: update the stored entry, and switch day if changed.
+      addEntry.activity.time = time;
+      addEntry.activity.text = text;
+      addEntry.activity.notes = notes;
+      if (newDay !== addEntry.day) {
+        addEntry.day = newDay;
+        // The slot binding from the original day no longer applies.
+        addEntry.direct = true;
+        addEntry.openSlotIndex = null;
+        addEntry.openSlotId = null;
       }
-      refreshDayCard(editState.day);
+      saveAddedActivities(added);
+    } else {
+      // Base activity: persist as an edit. Use `day` to move between days.
+      var edits = loadEdits();
+      var prev = edits[editState.activityId] || {};
+      var patch = { time: time, text: text, notes: notes };
+      if (newDay !== editState.day) patch.day = newDay;
+      else if (prev.day != null) patch.day = prev.day;
+      if (prev.removed) patch.removed = true;
+      edits[editState.activityId] = patch;
+      saveEdits(edits);
     }
+
+    rebuildItineraryState();
+    renderItinerary();
     closeEditSheet();
     showSavedToast('Saved');
   }
 
   function deleteEditSheet() {
     if (!editState.activityId) return;
-    removeAddedActivity(editState.activityId);
-    var edits = loadEdits();
-    delete edits[editState.activityId];
-    saveEdits(edits);
+    var added = loadAddedActivities();
+    var isAdded = added.some(function (a) {
+      return a.id === editState.activityId || (a.activity && a.activity.id === editState.activityId);
+    });
+
+    if (isAdded) {
+      removeAddedActivity(editState.activityId);
+      var edits = loadEdits();
+      delete edits[editState.activityId];
+      saveEdits(edits);
+    } else {
+      // Base activity: mark as removed so future rebuilds filter it out.
+      var edits2 = loadEdits();
+      var prev = edits2[editState.activityId] || {};
+      prev.removed = true;
+      edits2[editState.activityId] = prev;
+      saveEdits(edits2);
+      rebuildItineraryState();
+    }
     closeEditSheet();
     renderItinerary();
     showSavedToast('Removed');
@@ -1801,6 +1883,11 @@
     var buckets = { morning: [], afternoon: [], evening: [] };
     d.activities.forEach(function (a, i) {
       buckets[getTimeBucket(a.time)].push({ act: a, index: i });
+    });
+    Object.keys(buckets).forEach(function (key) {
+      buckets[key].sort(function (a, b) {
+        return sortKey(a.act.time) - sortKey(b.act.time);
+      });
     });
 
     var sections = '';

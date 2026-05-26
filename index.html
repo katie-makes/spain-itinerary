@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Upright:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-  <link rel="stylesheet" href="styles.css?v=20260526o" />
+  <link rel="stylesheet" href="styles.css?v=20260526p" />
 </head>
 <body>
 
@@ -207,6 +207,8 @@
       <div class="place-sheet__handle" aria-hidden="true"></div>
       <h3 class="place-sheet__name" id="edit-sheet-title">Edit plan</h3>
       <div class="edit-sheet__fields">
+        <label class="edit-sheet__label" for="edit-day">Day</label>
+        <select id="edit-day" class="form-input"></select>
         <label class="edit-sheet__label" for="edit-time">Time</label>
         <input type="text" id="edit-time" class="form-input" placeholder="e.g. 2:00pm, pm, noon" />
         <label class="edit-sheet__label" for="edit-text">Title</label>
@@ -217,7 +219,7 @@
       <div class="place-sheet__actions">
         <button type="button" class="btn btn--solid btn--sm" id="edit-save">Save</button>
         <button type="button" class="btn btn--ghost btn--sm" id="edit-view-place" hidden>View on map</button>
-        <button type="button" class="btn btn--ghost btn--sm" id="edit-delete" hidden>Remove</button>
+        <button type="button" class="btn btn--ghost btn--sm" id="edit-delete">Remove</button>
         <button type="button" class="btn btn--ghost btn--sm" data-edit-close>Cancel</button>
       </div>
     </div>
@@ -240,6 +242,6 @@
   <script src="directory-data.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="script.js?v=20260526n"></script>
+  <script src="script.js?v=20260526p"></script>
 </body>
 </html>
