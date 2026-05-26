@@ -168,7 +168,7 @@ ol, ul { list-style: none; }
   overflow: hidden;
   padding-top: var(--header-h);
   height: 100vh;
-  height: 100dvh;
+  height: 100svh;
 }
 .hero__inner {
   position: relative;
@@ -177,7 +177,7 @@ ol, ul { list-style: none; }
   align-items: center;
   justify-content: space-between;
   height: calc(100vh - var(--header-h));
-  height: calc(100dvh - var(--header-h));
+  height: calc(100svh - var(--header-h));
   padding: 24px 40px 0;
 }
 
