@@ -4,114 +4,131 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Barcelona &amp; Costa Brava · Itinerario</title>
-  <meta name="description" content="Nine days along the Catalan coast. May 29 – June 6, 2025." />
+  <meta name="description" content="Nine days along the Catalan coast. May 29 – June 6, 2026." />
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Upright:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=20260526a" />
 </head>
 <body>
 
-  <header class="site-header glass-bar">
+  <header class="site-header" id="site-header">
     <div class="site-header__inner">
       <a href="#top" class="site-logo">itinerario</a>
-      <nav class="site-nav" aria-label="Primary">
+      <nav class="site-nav" id="site-nav" aria-label="Primary">
         <a href="#map-explorer">Map</a>
-        <span class="site-nav__rule" aria-hidden="true"></span>
         <a href="#itinerary">Itinerary</a>
-        <span class="site-nav__rule" aria-hidden="true"></span>
         <a href="#directory">Directory</a>
       </nav>
-      <p class="site-header__meta">29 May – 6 June 2025</p>
+      <button type="button" class="site-nav-toggle" id="site-nav-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="Toggle menu">
+        <span class="site-nav-toggle__bar" aria-hidden="true"></span>
+        <span class="site-nav-toggle__bar" aria-hidden="true"></span>
+      </button>
     </div>
   </header>
 
-  <section id="top" class="hero hero--carnet">
-    <div class="hero__media" id="hero-image">
-      <img class="hero__photo" src="images/hero-costa-brava.png" alt="Tossa de Mar, Costa Brava" width="1920" height="1080" />
+  <section id="top" class="hero">
+    <div class="hero__media">
+      <img class="hero__photo" src="images/hero-costa-brava.png" alt="Tossa de Mar, Costa Brava" />
       <div class="hero__scrim" aria-hidden="true"></div>
     </div>
-    <div class="hero__layout">
-      <h1 class="hero__title">Barcelona<br><span class="hero__amp">&amp;</span> Costa Brava</h1>
-      <footer class="hero__foot">
-        <p class="hero__dates">May 29 – Jun 6, 2025</p>
-        <a href="#itinerary" class="hero__foot-link">turn the page →</a>
-      </footer>
+    <div class="hero__inner">
+      <h1 class="hero__title">
+        Barcelona<br />
+        <span class="hero__amp">&amp;</span> Costa Brava
+      </h1>
+      <p class="hero__dates">May 29 – Jun 6, 2026</p>
     </div>
   </section>
 
-  <nav class="day-jumper glass-bar" id="day-jumper" aria-label="Jump to day">
+  <section id="map-explorer" class="trip-glance">
+    <div class="section-shell">
+      <h2 class="section-title">The Trip at a Glance</h2>
+      <div class="map-card">
+        <div class="map-card__map-col">
+          <div class="map-day-tabs" id="map-day-tabs" role="tablist"></div>
+          <div id="route-map" class="map-card__map"></div>
+        </div>
+        <aside class="map-card__panel" id="map-panel" aria-live="polite"></aside>
+      </div>
+    </div>
+  </section>
+
+  <nav class="day-jumper" id="day-jumper" aria-label="Jump to day">
     <div class="day-jumper__inner" id="day-jumper-buttons"></div>
   </nav>
 
-  <section id="map-explorer" class="map-explorer">
-    <div class="map-explorer__head">
-      <h2 class="section-title">On the map</h2>
-      <p class="section-sub">Tap a day to see stops. Click a photo pin or list item to zoom in.</p>
-    </div>
-    <div class="map-explorer__shell glass-card">
-      <div class="map-explorer__map-col">
-        <div class="map-day-tabs" id="map-day-tabs" role="tablist"></div>
-        <div id="route-map" class="map-explorer__map"></div>
-      </div>
-      <aside class="map-explorer__panel glass-panel" id="map-panel" aria-live="polite"></aside>
-    </div>
-  </section>
-
   <section id="itinerary" class="itinerary">
-    <div class="itinerary__head">
-      <h2 class="section-title">Day by day</h2>
-      <p class="section-sub">Confirmed plans are anchors. Open windows below are ready to fill.</p>
-      <div class="legend">
-        <span class="legend__item legend__item--confirmed"><span class="legend__dot"></span>Confirmed</span>
-        <span class="legend__item legend__item--open"><span class="legend__dot legend__dot--open"></span>Open</span>
-      </div>
+    <div class="section-shell">
+      <h2 class="section-title">Itinerary</h2>
+      <div id="itinerary-list" class="itinerary__list"></div>
     </div>
-    <div id="itinerary-list" class="itinerary__list"></div>
   </section>
 
   <section id="directory" class="directory">
-    <div class="directory__head">
-      <h2 class="section-title">The Directory</h2>
-      <p class="section-sub">Search saved spots or find any place — then add it to an open window.</p>
+    <div class="section-shell">
+      <h2 class="section-title">Directory</h2>
+      <p class="directory__sub">Search saved spots or find any place — then add it to an open window.</p>
       <div class="directory__sources">
-        <a href="https://maps.app.goo.gl/CHN2nujYmKadyvfX9" target="_blank" rel="noopener" class="source-link">Barcelona list ↗</a>
-        <a href="https://maps.app.goo.gl/GMnpp6MMuQNxXmJo9" target="_blank" rel="noopener" class="source-link">Costa Brava list ↗</a>
+        <a href="https://maps.app.goo.gl/GMnpp6MMuQNxXmJo9" target="_blank" rel="noopener" class="source-link">
+          <span>Barcelona List</span>
+          <svg viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 9L9 3M9 3H4M9 3V8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="https://maps.app.goo.gl/CHN2nujYmKadyvfX9" target="_blank" rel="noopener" class="source-link">
+          <span>Costa Brava List</span>
+          <svg viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 9L9 3M9 3H4M9 3V8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
       </div>
+
+      <div class="directory__controls">
+        <div class="search-field">
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/><path d="m13 13-2.5-2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <input id="directory-search" type="search" placeholder="Search saved places or any restaurant..." aria-label="Search places" autocomplete="off" />
+          <div id="place-search-results" class="place-search-results" hidden></div>
+        </div>
+        <div class="filter-row" id="directory-filters" role="tablist">
+          <button class="chip is-active" role="tab" data-filter="all" aria-selected="true">All</button>
+          <button class="chip" role="tab" data-filter="barcelona-list" aria-selected="false">Barcelona List</button>
+          <button class="chip" role="tab" data-filter="costa-brava-list" aria-selected="false">Costa Brava List</button>
+          <button class="chip" role="tab" data-filter="restaurants" aria-selected="false">Eat &amp; Drink</button>
+          <button class="chip" role="tab" data-filter="shops" aria-selected="false">Shops</button>
+          <button class="chip" role="tab" data-filter="sights" aria-selected="false">Sights</button>
+        </div>
+      </div>
+
+      <div id="directory-grid" class="directory__grid"></div>
+      <p id="directory-empty" class="directory__empty" hidden>No places match.</p>
     </div>
-    <div class="directory__controls">
-      <div class="search-field glass-input">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        <input id="directory-search" type="search" placeholder="Search saved places or any restaurant, shop, beach…" aria-label="Search places" autocomplete="off" />
-        <div id="place-search-results" class="place-search-results" hidden></div>
-      </div>
-      <div class="filter-row" id="directory-filters" role="tablist">
-        <button class="chip is-active" role="tab" data-filter="all" aria-selected="true">All</button>
-        <button class="chip" role="tab" data-filter="barcelona-list" aria-selected="false">Barcelona list</button>
-        <button class="chip" role="tab" data-filter="costa-brava-list" aria-selected="false">Costa Brava list</button>
-        <button class="chip" role="tab" data-filter="restaurants" aria-selected="false">Eat &amp; drink</button>
-        <button class="chip" role="tab" data-filter="shops" aria-selected="false">Shops</button>
-        <button class="chip" role="tab" data-filter="sights" aria-selected="false">Sights</button>
-      </div>
-    </div>
-    <div id="directory-grid" class="directory__grid"></div>
-    <p id="directory-empty" class="directory__empty" hidden>No places match.</p>
   </section>
 
   <footer class="footer">
     <div class="footer__inner">
-      <p class="footer__brand">itinerario · esp 25</p>
-      <p class="footer__note">Buen viaje.</p>
+      <a href="#top" class="footer__brand">itinerario</a>
     </div>
   </footer>
+
+  <!-- Save toast -->
+  <div id="save-toast" class="save-toast" role="status" aria-live="polite" hidden>
+    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3.5 8.5l3 3 6-6.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>Saved</span>
+  </div>
+
+  <!-- Map modal: full-screen day map -->
+  <div id="map-modal" class="map-modal" hidden aria-hidden="true" role="dialog" aria-label="Day map">
+    <div class="map-modal__backdrop" data-map-modal-close></div>
+    <div class="map-modal__dialog">
+      <button type="button" class="map-modal__close" data-map-modal-close aria-label="Close map">&times;</button>
+      <div class="map-modal__body" id="map-modal-body"></div>
+    </div>
+  </div>
 
   <!-- Slot picker: open window → directory + time -->
   <div id="picker-modal" class="modal" hidden aria-hidden="true">
     <div class="modal__backdrop" data-modal-close></div>
-    <div class="modal__dialog modal__dialog--wide glass-card" role="dialog" aria-modal="true">
+    <div class="modal__dialog" role="dialog" aria-modal="true">
       <button type="button" class="modal__close" data-modal-close aria-label="Close">×</button>
       <span class="kicker" id="picker-kicker">Fill an open window</span>
       <h2 class="modal__title" id="picker-title">Add a spot</h2>
@@ -122,7 +139,7 @@
         <div class="picker-days" id="picker-days"></div>
       </div>
       <div class="modal__section" id="picker-slot-section" hidden>
-        <h3 class="modal__label">Open window</h3>
+        <h3 class="modal__label" id="picker-slot-label">Open window</h3>
         <div class="picker-slots" id="picker-slots"></div>
       </div>
 
@@ -137,14 +154,15 @@
         </div>
         <div class="custom-time" id="custom-time-wrap" hidden>
           <label class="modal__label" for="custom-time">Specific time</label>
-          <input type="time" id="custom-time" class="glass-input-field" />
+          <input type="time" id="custom-time" class="form-input" />
         </div>
       </div>
 
       <div class="modal__section">
         <h3 class="modal__label">Choose a place</h3>
-        <div class="picker-search glass-input">
-          <input type="search" id="picker-search" placeholder="Search directory or find a place…" autocomplete="off" />
+        <div class="search-field search-field--in-modal">
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/><path d="m13 13-2.5-2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <input type="search" id="picker-search" placeholder="Search directory or find a place..." autocomplete="off" />
           <div id="picker-search-results" class="place-search-results" hidden></div>
         </div>
         <div class="picker-filters filter-row" id="picker-filters"></div>
@@ -161,19 +179,20 @@
   <!-- Edit itinerary item -->
   <div id="edit-sheet" class="place-sheet edit-sheet" hidden aria-hidden="true">
     <div class="place-sheet__backdrop" data-edit-close tabindex="-1"></div>
-    <div class="place-sheet__panel edit-sheet__panel" role="dialog" aria-labelledby="edit-sheet-title">
+    <div class="place-sheet__panel" role="dialog" aria-labelledby="edit-sheet-title">
       <div class="place-sheet__handle" aria-hidden="true"></div>
       <h3 class="place-sheet__name" id="edit-sheet-title">Edit plan</h3>
       <div class="edit-sheet__fields">
         <label class="edit-sheet__label" for="edit-time">Time</label>
-        <input type="text" id="edit-time" class="glass-input-field" placeholder="e.g. 2:00pm, pm, noon" />
+        <input type="text" id="edit-time" class="form-input" placeholder="e.g. 2:00pm, pm, noon" />
         <label class="edit-sheet__label" for="edit-text">Title</label>
-        <input type="text" id="edit-text" class="glass-input-field" />
+        <input type="text" id="edit-text" class="form-input" />
         <label class="edit-sheet__label" for="edit-notes">Notes</label>
-        <textarea id="edit-notes" class="glass-input-field edit-sheet__textarea" rows="2"></textarea>
+        <textarea id="edit-notes" class="form-input form-input--textarea" rows="2"></textarea>
       </div>
       <div class="place-sheet__actions">
         <button type="button" class="btn btn--solid btn--sm" id="edit-save">Save</button>
+        <button type="button" class="btn btn--ghost btn--sm" id="edit-view-place" hidden>View on map</button>
         <button type="button" class="btn btn--ghost btn--sm" id="edit-delete" hidden>Remove</button>
         <button type="button" class="btn btn--ghost btn--sm" data-edit-close>Cancel</button>
       </div>
@@ -188,7 +207,7 @@
       <h3 class="place-sheet__name" id="place-sheet-name"></h3>
       <p class="place-sheet__address" id="place-sheet-address"></p>
       <div class="place-sheet__actions">
-        <a href="#" id="place-sheet-maps" class="btn btn--outline btn--sm" target="_blank" rel="noopener">Open in Google Maps</a>
+        <a href="#" id="place-sheet-maps" class="btn btn--solid btn--sm" target="_blank" rel="noopener">Open in Google Maps</a>
         <button type="button" class="btn btn--ghost btn--sm" data-sheet-close>Dismiss</button>
       </div>
     </div>
@@ -196,6 +215,7 @@
 
   <script src="directory-data.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="script.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="script.js?v=20260526a"></script>
 </body>
 </html>
